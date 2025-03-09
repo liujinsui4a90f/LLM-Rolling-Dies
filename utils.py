@@ -3,9 +3,6 @@
 def isValidAction(last_action : dict[int, int, bool], action : dict[int, int, bool], playerNum) -> bool:
         # 当游戏中第一个玩家叫数时
         if last_action["num"] == 0 and last_action['point'] == 0:
-            # 首个开叫，无法质疑
-            if action['point'] == -1 and action['num'] == -1:
-                return False
             # 叫1不能叫飞
             if action['point'] == 1 and action['state'] == False:
                 return False
@@ -18,11 +15,7 @@ def isValidAction(last_action : dict[int, int, bool], action : dict[int, int, bo
             # 飞必须n+1起叫
             if action['num'] < playerNum + 1 and action['state'] == False:
                 return False
-        
-        # 第二次及以后叫数的玩家可以质疑
-        elif action['num'] == -1 and action['point'] == -1:
-            return True
-            
+                    
         # 飞换斋时, 所叫色子数量最多比上家数量少一个
         elif action['state'] and not last_action['state']:
             if action['num'] < last_action['num'] - 1:

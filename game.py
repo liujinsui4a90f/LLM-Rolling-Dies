@@ -1,3 +1,15 @@
+"""
+game.py - 摇色子游戏模拟器
+
+该文件实现了一个多人摇色子游戏的模拟，包含游戏规则、玩家交互和游戏流程控制。
+主要类：
+- Game：游戏主类，负责游戏规则执行和流程控制
+
+作者：Jinsui
+版本：1.0
+最后更新：2025-03-09
+"""
+
 from random import randint
 from player import Player
 
@@ -26,8 +38,6 @@ class Game:
             - 首先开始叫数的玩家叫1点时，所叫的数量不得少于n-1个；
             - 叫“斋”时，所叫的数量不得少于n；
             - 叫“飞”时，所叫数量不得少于n+1。
-    
-
     """
     def __init__(self, names : list[str]):
         self.players = [Player(name) for name in names]
@@ -60,16 +70,16 @@ class Game:
 
         self.round += 1
 
-    def _isSuccessfulQuery(self):
-        # 处理质疑逻辑
+    def _isSuccessfulQuery(self) -> dict[bool, int]:
+        """处理质疑逻辑"""
         pointCounter = 0
         for idx in range(self.playerNum):
             pointCounter += self.players[idx].CountDies(self.action['point'], self.action['state'])
         
         if pointCounter < self.action['num']:
-            return True
+            return {'suc' : True, 'num' : pointCounter}
         else:
-            return False
+            return {'suc' : False, 'num' : pointCounter}
 
     
     def start_game(self):
@@ -79,19 +89,18 @@ class Game:
             
             #无人质疑时，只更新玩家叫数
             while True:
-                currentAction = self.players[self.ActionPlayerNo].GerenateAction(self.action, self.playerNum)
-                self.ActionPlayerNo = (self.ActionPlayerNo + 1) % self.playerNum
-
-                if currentAction['num'] == -1 and currentAction['point'] == -1:
+                query = self.players[self.ActionPlayerNo].isChooseToQuery()
+                if query:
                     print(f"玩家“{self.players[self.ActionPlayerNo].name}”对上家提出质疑")
                     break
-                else:
-                    self.action = currentAction
-                    print(f"玩家“{self.players[self.ActionPlayerNo].name}”叫数{self.action['num']}个{self.action['point']}{"斋" if self.action['state'] else "飞"}")
+                currentAction = self.players[self.ActionPlayerNo].GerenateAction(self.action, self.playerNum)
+                self.ActionPlayerNo = (self.ActionPlayerNo + 1) % self.playerNum
+                self.action = currentAction
+                print(f"玩家“{self.players[self.ActionPlayerNo].name}”叫数{self.action['num']}个{self.action['point']}{"斋" if self.action['state'] else "飞"}")
                     
             
             # 当有人质疑时，处理质疑逻辑
-            if self._isSuccessfulQuery():
+            if self._isSuccessfulQuery()['suc']:
                 print(f"玩家“{self.players[self.ActionPlayerNo].name}”质疑成功，上家喝酒")
                 self.players[(self.ActionPlayerNo - 1) % self.playerNum].cups -= 1
                 self.lastDrinker = (self.ActionPlayerNo - 1) % self.playerNum
@@ -111,7 +120,3 @@ if __name__ == "__main__":
     names = ['A','B','C']
     game = Game(names)
     game.start_game()
-
-        
-
-        

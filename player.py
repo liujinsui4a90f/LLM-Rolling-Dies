@@ -10,6 +10,10 @@ class Player:
     def DiesReset(self):
         self.dies = [randint(1,6) for i in range(5)]
 
+    def isChooseToQuery(self):
+        #TODO: 将此过程转换为LLM生成
+        return bool(input("是否质疑上家 (输入Ture/False):"))
+
     def GerenateAction(self, last_action, playerNum):
         for i in range(5):
             #TODO: 将此过程转换为LLM生成
