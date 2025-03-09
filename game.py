@@ -12,6 +12,7 @@ game.py - 摇色子游戏模拟器
 
 from random import randint
 from player import Player
+from record import *
 
 class Game:
     """
@@ -44,6 +45,10 @@ class Game:
         self.playerNum = len(names)
         self.round = 0
 
+        #记录一局游戏
+        self.game_recorder = GameRecorder([p.name for p in self.players], [], [])
+        self.game_recorder.names = [p.name for p in self.players]
+
         # 当前行动玩家编号
         self.ActionPlayerNo = randint(0, self.playerNum - 1) 
 
@@ -51,7 +56,7 @@ class Game:
         self.lastDrinker = 0 # range: [0,self.playerNum - 1]
 
         # 最近一次玩家叫数
-        self.action = {
+        self.call = {
             "num" : 0,
             "point" : 0,
             "state" : True # "斋"为True，“飞”为False
@@ -60,9 +65,11 @@ class Game:
     def _ResetGame(self):
         # 当前行动玩家编号
         self.ActionPlayerNo = self.lastDrinker % self.playerNum 
+        for p in self.players:
+            p.dies = [randint(1,6) for i in range(5)]
 
         # 将上一次行动重置为初始状态
-        self.action = {
+        self.call = {
             "num" : 0,
             "point" : 0,
             "state" : True # "斋"为True，“飞”为False
@@ -70,13 +77,14 @@ class Game:
 
         self.round += 1
 
-    def _isSuccessfulQuery(self) -> dict[bool, int]:
+    def _isSuccessfulChallenge(self) -> dict[bool, int]:
         """处理质疑逻辑"""
+
         pointCounter = 0
         for idx in range(self.playerNum):
-            pointCounter += self.players[idx].CountDies(self.action['point'], self.action['state'])
+            pointCounter += self.players[idx].CountDies(self.call['point'], self.call['state'])
         
-        if pointCounter < self.action['num']:
+        if pointCounter < self.call['num']:
             return {'suc' : True, 'num' : pointCounter}
         else:
             return {'suc' : False, 'num' : pointCounter}
@@ -84,23 +92,34 @@ class Game:
     
     def start_game(self):
         while len(self.players) > 1:
-            print(f"第{self.round}局")
+            print(f"第{self.round + 1}局")
             self._ResetGame()
+            roundRecorder = RoundRecorder(self.players.copy(), self.round, list(), None, None)  
             
             #无人质疑时，只更新玩家叫数
+            challenge = False
             while True:
-                query = self.players[self.ActionPlayerNo].isChooseToQuery()
-                if query:
+                
+                if self.call['num'] != 0 and self.call['point'] != 0:
+                    challenge = self.players[self.ActionPlayerNo].ChooseToChallenge()
+                if challenge:
                     print(f"玩家“{self.players[self.ActionPlayerNo].name}”对上家提出质疑")
                     break
-                currentAction = self.players[self.ActionPlayerNo].GerenateAction(self.action, self.playerNum)
+                self.call = self.players[self.ActionPlayerNo].GerenateCall(self.call, self.playerNum)
+
+                # 记录这次叫数事件
+                roundRecorder.callEvents.append(CallRecorder(
+                    self.players[self.ActionPlayerNo].name,
+                    self.call['num'],
+                    self.call['point'],
+                    self.call['state']
+                    ))
+                print(f"玩家“{self.players[self.ActionPlayerNo].name}”叫数{self.call['num']}个{self.call['point']}{"斋" if self.call['state'] else "飞"}")
                 self.ActionPlayerNo = (self.ActionPlayerNo + 1) % self.playerNum
-                self.action = currentAction
-                print(f"玩家“{self.players[self.ActionPlayerNo].name}”叫数{self.action['num']}个{self.action['point']}{"斋" if self.action['state'] else "飞"}")
-                    
             
             # 当有人质疑时，处理质疑逻辑
-            if self._isSuccessfulQuery()['suc']:
+            challengeInfo = self._isSuccessfulChallenge()
+            if challengeInfo['suc']:
                 print(f"玩家“{self.players[self.ActionPlayerNo].name}”质疑成功，上家喝酒")
                 self.players[(self.ActionPlayerNo - 1) % self.playerNum].cups -= 1
                 self.lastDrinker = (self.ActionPlayerNo - 1) % self.playerNum
@@ -109,12 +128,30 @@ class Game:
                 self.players[self.ActionPlayerNo].cups -= 1
                 self.lastDrinker = self.ActionPlayerNo
 
+            # 记录这次质疑事件
+            roundRecorder.challengeEvent = ChallengeRecorder(
+                self.players[self.ActionPlayerNo].name,
+                self.players[(self.ActionPlayerNo - 1) % self.playerNum].name,
+                challengeInfo['suc'],
+                self.players[(self.ActionPlayerNo - 1) % self.playerNum].name if challengeInfo['suc'] else self.players[self.ActionPlayerNo].name
+            )
+
             # 将已经“醉倒”的玩家排除出游戏
             for i in range(self.playerNum):
                 if self.players[i].cups == 0:
-                    self.players.remove(self.players[i])
+                    loser = self.players.pop(i)
                     self.playerNum -= 1
+                    # 记录失败者
+                    roundRecorder.loser = loser
+                    break
+
+            self.game_recorder.rounds.append(roundRecorder)
+            if roundRecorder.loser != None:
+                self.game_recorder.losers.append(loser.name)
+
+        
         print(f"玩家{self.players[0].name}获得了本局游戏最终的胜利！")
+        print(self.game_recorder.to_dict())
 
 if __name__ == "__main__":
     names = ['A','B','C']

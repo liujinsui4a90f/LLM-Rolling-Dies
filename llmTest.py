@@ -1,12 +1,11 @@
 from openai import OpenAI
 
-client = OpenAI(api_key='sk-2533999e15524324b8854136ee786886', base_url='https://api.deepseek.com')
+client = OpenAI(api_key='MC-7A9D14B972BE45EE8445E0BFAF4A1D52', base_url='https://api.mindcraft.com.cn/v1')
 
 response = client.chat.completions.create(
     model='deepseek-chat',
     messages=[
-        {'role' : 'system', 'content' : 'You are a helpful teacher'},
-        {'role' : 'user', 'content' : 'can you tell me how to learn math'}
+        {'role' : 'user', 'content' : 'Hello!'}
     ]
 )
 
