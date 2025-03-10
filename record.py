@@ -60,13 +60,3 @@ class GameRecorder:
             'losers' : self.losers,
             'rounds' : [r.to_dict() for r in self.rounds]
         }
-
-
-
-
-    
-
-
-
-
-    
