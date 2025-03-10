@@ -9,10 +9,8 @@ except FileNotFoundError as e:
     exit()
 
 class LLMClient:
-    def __init__(self, name : str, model):
-        self.name = name
+    def __init__(self, model : str):
         self.model = model
-
         self.client = OpenAI(api_key=APIKEY, base_url='https://api.mindcraft.com.cn/v1')
 
     def response(self, prompt : str) -> str:

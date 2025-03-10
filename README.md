@@ -5,6 +5,13 @@
 
 ---
 
+TODO List:
+
+- [ ] 实现round_base_info功能
+- [ ] 实现对其他玩家的评价功能
+- [ ] 将call和challenge功能用LLM实现
+- [ ] 写上面两条用到的prompt
+
 ```mermaid
 mindmap
   root(AI Plays Rolling Dies)

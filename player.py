@@ -1,9 +1,14 @@
 from random import randint
 from utils import isValidAction
+from llmClient import LLMClient
 
 class Player:
-    def __init__(self, name):
+    def __init__(self, name : str, model : str):
+        #玩家名
         self.name = name
+        self.client = LLMClient(model)
+
+        #游戏基本数据
         self.cups = 1
         self.dies = [0]*5
 
