@@ -11,6 +11,7 @@ game.py - 摇色子游戏模拟器
 """
 
 import json
+from datetime import datetime
 from random import randint, shuffle
 from player import Player
 from record import *
@@ -193,7 +194,12 @@ class Game:
 
         
         print(f"玩家{self.players[0].name}获得了本局游戏最终的胜利！")
-        print(json.dumps(self.game_recorder.to_dict(), indent=4, ensure_ascii=False))
+        wholeRecord = json.dumps(self.game_recorder.to_dict(), indent=4, ensure_ascii=False)
+        print(wholeRecord)
+        datestrap = str(datetime.now())
+        with open(f'/record/{datestrap}.json', '+wb') as f:
+            f.write(wholeRecord)
+
 
 if __name__ == "__main__":
     configs = [

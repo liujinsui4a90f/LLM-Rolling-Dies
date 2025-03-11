@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from dataclasses import dataclass
 from player import Player
 
@@ -104,7 +105,12 @@ class GameRecorder:
             'losers' : self.losers,
             'rounds' : [r.to_dict() for r in self.rounds]
         }
-
+    def save(self):
+        d = self.to_dict()
+        j = json.dumps(d)
+        datestrap = datetime.now().strftime("%Y%m%d_%H%M%S")
+        with open(f'/record/{datestrap}.json', 'w', encoding='UTF-8') as f:
+            f.write(j)
 
 
 if __name__ == '__main__':
