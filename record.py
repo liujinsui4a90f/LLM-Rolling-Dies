@@ -6,6 +6,7 @@ from player import Player
 @dataclass
 class ActionRecorder:
     actor : str
+
     def to_dict(self) -> dict:
         pass
 
@@ -14,28 +15,37 @@ class CallRecorder(ActionRecorder):
     num : int
     point : int
     state : bool
+    reason : str
+    action : str
 
     def to_dict(self):
         return {
-                'type' : 'Call',
-                'actor' : self.actor,
-                'detial' : { 'num' : self.num, 'point' : self.point, 'state' : '斋' if self.state else '飞'}
+                'Event Type' : 'Call',
+                'Actor' : self.actor,
+                'Detial' : { 'num' : self.num, 'point' : self.point, 'state' : '斋' if self.state else '飞'},
+                'Reason' : self.reason,
+                'Action' : self.action
                 }
 
 @dataclass
 class ChallengeRecorder(ActionRecorder):
     impugant : str
     decision : bool
+    reason : str
+    action : str
     suc : bool | None = None
     drinker : str | None = None
+    
 
     def to_dict(self) -> dict:
         return {
-                'type' : 'Challenge',
-                'actor' : self.actor,
-                'impugant' : self.impugant,
-                'decision' : self.decision,
-                'detial' : {'suc' : self.suc, 'drinker': self.drinker} if self.decision else None
+                'Event Type' : 'Challenge',
+                'Actor' : self.actor,
+                'Impugant' : self.impugant,
+                'Decision' : self.decision,
+                'Detial' : {'suc' : self.suc, 'drinker': self.drinker} if self.decision else None,
+                'Reason' : self.reason,
+                'Action' : self.action
                 }
 
 
@@ -53,6 +63,34 @@ class RoundRecorder:
             'Events' : [e.to_dict() for e in self.PlayerEvents],
             'loser' : None if self.loser == None else self.loser.name
         }
+    
+    def round_info(self, currentPlayer : str) -> str:
+        """生成本轮游戏的基本信息"""
+
+        # 玩家人数
+        info = [f'本轮游戏中，场上共有{len(self.alivePlayers)}名玩家。除你之外']
+
+        # 每个玩家的信息
+        for p in self.alivePlayers:
+            if p['name'] == currentPlayer:
+                continue
+            info.append(f"玩家{p['name']}目前还有{p['cups']}杯酒")
+        info.append('\n')
+
+        # 玩家过往叫数或质疑
+        info.append('以下是这轮游戏中其他玩家的过往行为：')
+        for event in self.PlayerEvents:
+            if hasattr(event, "impugant"):
+                if event.decision:
+                    info.append(f"{"玩家"+event.actor if event.actor != currentPlayer else '你'}选择质疑{'玩家'+event.impugant if event.impugant != currentPlayer else '你'}")
+                else:
+                    info.append(f"{"玩家"+event.actor if event.actor != currentPlayer else '你'}选择不质疑{'玩家'+event.impugant if event.impugant != currentPlayer else '你'}")
+            else:
+                info.append(f"{'玩家'+event.actor if event.actor != currentPlayer else '你'}叫数{event.num}个{event.point}{'斋' if event.state else '飞'}")
+                info.append(f'此时{'他' if event.actor != currentPlayer else '你'}' + event.action)
+
+        return '\n'.join(info)
+
 
 @dataclass()
 class GameRecorder:
@@ -76,8 +114,12 @@ if __name__ == '__main__':
                       roundNum=1,
                       PlayerEvents=list(),
                       loser=None)
-    r.PlayerEvents.append(CallRecorder('A', 5,3,False))
+    r.PlayerEvents.append(CallRecorder('A', 5,3,False,'','冷静地摇动色盅，微微皱眉，似乎在思考，然后坚定地说出‘4个5斋’'))
     r.PlayerEvents.append(ChallengeRecorder('B', 'A', False))
+    r.PlayerEvents.append(CallRecorder('B', 6,3,False,'','冷静地摇动色盅，微微皱眉，似乎在思考，然后坚定地说出‘4个5斋’'))
+    r.PlayerEvents.append(ChallengeRecorder('C', 'B', False))
+    r.PlayerEvents.append(CallRecorder('C', 8,5,False,'','冷静地摇动色盅，微微皱眉，似乎在思考，然后坚定地说出‘4个5斋’'))
+    r.PlayerEvents.append(ChallengeRecorder('A', 'C', True, True, 'C'))
     print(r)
-    print(json.dumps(r.to_dict(), indent=4, ensure_ascii=False))
+    print(r.round_info('A'))
 

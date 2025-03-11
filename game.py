@@ -63,6 +63,11 @@ class Game:
             "state" : True # "斋"为True，“飞”为False
         }
 
+        # 初始化对其他玩家的看法
+        nameList = [p.name for p in self.players]
+        for p in self.players:
+            p.opinion_init(nameList)
+
     def _ResetGame(self):
         """有玩家喝酒后，重置游戏"""
         #随机打乱玩家座次
@@ -102,7 +107,6 @@ class Game:
         else:
             return {'suc' : False, 'num' : pointCounter}
 
-    
     def start_game(self):
         while len(self.players) > 1:
             print(f"第{self.round + 1}局")
@@ -116,26 +120,38 @@ class Game:
                 #第一次叫数的玩家不会被质疑，                
                 if self.call['num'] != 0 and self.call['point'] != 0: 
                     # 如果不是第一次叫数，才能让玩家决定是否质疑
-                    challenge = self.players[self.ActionPlayerNo].ChooseToChallenge()
-                    if not challenge:
+                    challengeStruct = self.players[self.ActionPlayerNo].ChooseToChallenge(roundRecorder.round_info(self.players[self.ActionPlayerNo].name))
+                    if not challengeStruct['choice']:
                         # 即使玩家不选择质疑，也记录这次质疑事件
                         roundRecorder.PlayerEvents.append(ChallengeRecorder(
                             actor=self.players[self.ActionPlayerNo],
                             impugant=self.players[(self.ActionPlayerNo - 1) % self.playerNum].name,
                             decision=False,
-                            suc=None, drinker=None))
+                            reason=challengeStruct['reason'],
+                            action=challengeStruct['action'],
+                            suc=None, drinker=None
+                            ))
+                        print(challengeStruct['reason'])
+                        print(challengeStruct['action'])
                     else:
                         print(f"玩家“{self.players[self.ActionPlayerNo].name}”对上家提出质疑")
                         break
                 # 执行玩家叫数逻辑
-                self.call = self.players[self.ActionPlayerNo].GerenateCall(self.call, self.playerNum)
-
+                callStruct = self.players[self.ActionPlayerNo].GerenateCall(last_call=self.call,
+                                                                           playerNum=self.playerNum,
+                                                                           roundInfo=roundRecorder.round_info(self.players[self.ActionPlayerNo].name)
+                                                                           )
+                self.call = callStruct['call']
+                print(callStruct['reason'])
+                print(callStruct['action'])
                 # 记录这次叫数事件
                 roundRecorder.PlayerEvents.append(CallRecorder(
                     self.players[self.ActionPlayerNo].name,
                     self.call['num'],
                     self.call['point'],
-                    self.call['state']
+                    self.call['state'],
+                    callStruct['reason'],
+                    callStruct['action']
                     ))
                 print(f"玩家“{self.players[self.ActionPlayerNo].name}”叫数{self.call['num']}个{self.call['point']}{"斋" if self.call['state'] else "飞"}")
                 self.ActionPlayerNo = (self.ActionPlayerNo + 1) % self.playerNum
@@ -156,11 +172,13 @@ class Game:
                 actor=self.players[self.ActionPlayerNo].name,
                 impugant=self.players[(self.ActionPlayerNo - 1) % self.playerNum].name,
                 decision=True,
+                reason=challengeStruct['reason'],
+                action=challengeStruct['action'],
                 suc = challengeInfo['suc'],
                 drinker=self.players[(self.ActionPlayerNo - 1) % self.playerNum].name if challengeInfo['suc'] else self.players[self.ActionPlayerNo].name
             ))
 
-            # 将已经“醉倒”的玩家排除出游戏
+            # 将已经“醉倒”的玩家淘汰出游戏
             for i in range(self.playerNum):
                 if self.players[i].cups == 0:
                     loser = self.players.pop(i)
@@ -179,9 +197,9 @@ class Game:
 
 if __name__ == "__main__":
     configs = [
-        {'name' : 'A', 'model' : 'Model A'},
-        {'name' : 'B', 'model' : 'Model B'},
-        {'name' : 'C', 'model' : 'Model C'}
+        {'name' : 'Alen', 'model' : 'deepseek-chat'},
+        {'name' : 'Bob', 'model' : 'deepseek-chat'},
+        {'name' : 'Cendy', 'model' : 'deepseek-chat'}
     ]
     game = Game(configs)
     game.start_game()

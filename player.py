@@ -1,6 +1,8 @@
+import json
 from random import randint
 from utils import isValidAction
 from llmClient import LLMClient
+
 
 class Player:
     def __init__(self, name : str, model : str):
@@ -12,6 +14,13 @@ class Player:
         self.cups = 1
         self.dies = [0]*5
 
+        self.opinions = {}
+
+        # 读取游戏规则，用于后续生成prompt
+        with open("./prompt/rule", 'r', encoding='UTF-8') as r:
+            self.rule = r.read()
+        self.rule = self.rule.format(name='Player C')
+
     def DiesReset(self):
 
         #五个色子如果点数各不一样则需要重摇
@@ -20,38 +29,79 @@ class Player:
             if len(set(dies)) != 5:
                 break
         self.dies = dies
+    
+    def opinion_init(self, Players : list[str]):
+        """初始化对其他玩家的看法"""
+        self.opinions = {
+            p : '还不了解这名玩家'
+            for p in Players if p != self.name
+        }
+    
+    def generate_opinion(self):
+        """每轮游戏过后更新对其他玩家的看法"""
+        raise NotImplemented
 
-
-    def ChooseToChallenge(self):
-        #TODO: 将此过程转换为LLM生成
-        return bool(int(input(f"玩家“{self.name}“是否质疑上家 (输入Ture/False):")))
-
-    def GerenateCall(self, last_call, playerNum):
+    def ChooseToChallenge(self, roundInfo) -> dict:
+        with open("./prompt/challenge_prompt", 'r', encoding='UTF-8') as c:
+            challenge_prompt = c.read()
+            challenge_prompt = challenge_prompt.format(rule=self.rule,
+                                         round_info=roundInfo,
+                                         dies=self.dies,
+                                         understanding=json.dumps(self.opinions, ensure_ascii=False),
+                                         cups=self.cups)
+        
         for i in range(5):
             try:
-                #TODO: 将此过程转换为LLM生成
-                num, point, state = input("请输入一个动作（以“数量,点数,1(斋)/0(飞)”的格式）：").split(',')
-                num = int(num)
-                point = int(point)
-                state = bool(int(state))
+                # 向llm发起询问
+                response = self.client.ask(challenge_prompt)
+                # 提取json
+                response = response[7:-3]
+                response = json.loads(response)
 
-                if point < 1 or point > 6:
+                return response
+            except Exception as e:
+                print(e)
+                print(f"第{i}次尝试，叫数生成失败或不符合规则")
+        print("有人砸场子，这破酒不喝也罢！")
+        raise Exception("有玩家连续五次没有生成正确的行动，游戏结束")
+
+    def GerenateCall(self, last_call : dict, playerNum : int, roundInfo : str):
+
+        with open("./prompt/call_prompt", 'r', encoding='UTF-8') as c:
+            call_prompt = c.read()
+        call_prompt = call_prompt.format(rule=self.rule,
+                                         round_info=roundInfo,
+                                         dies=self.dies,
+                                         understanding=json.dumps(self.opinions, ensure_ascii=False),
+                                         cups=self.cups)
+        for i in range(5):
+            try:
+                # 向llm发起询问
+                response = self.client.ask(call_prompt)
+                # 提取json
+                response = response[7:-3]
+                response = json.loads(response)
+
+                if response['point'] < 1 or response['point'] > 6:
                     raise ValueError("Point out of Boundary (1-6)")
-                if point > playerNum * 5:
+                if response['num'] > playerNum * 5:
                     raise ValueError("The Player called too many dies")
-
                 call = {
-                    'num' : num,
-                    'point' : point,
-                    'state' : state
+                    'num' : response['num'],
+                    'point' : response['point'],
+                    'state' : response['state']
                 }
 
                 #判断该行动是否符合规则
                 if not isValidAction(last_call, call, playerNum):
                     raise ValueError("The call doesn't match rules, please retry.")
-                return call
+                
+                output = {'call' : call,
+                          'reason' : response['reason'],
+                          'action' : response['action']}
+                return output
             
-            except ValueError as e:
+            except Exception as e:
                 print(f"ERROR: {e}")
                 print(f"第{i}次尝试，叫数生成失败或不符合规则")
             

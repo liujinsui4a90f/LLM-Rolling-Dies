@@ -13,7 +13,7 @@ class LLMClient:
         self.model = model
         self.client = OpenAI(api_key=APIKEY, base_url='https://api.mindcraft.com.cn/v1')
 
-    def response(self, prompt : str) -> str:
+    def ask(self, prompt : str) -> str:
         response = self.client.chat.completions.create(model='deepseek-chat',
                                             messages=[
                                                 {'role' : 'user', 'content' : prompt}
