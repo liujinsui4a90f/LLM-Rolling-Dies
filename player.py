@@ -13,7 +13,14 @@ class Player:
         self.dies = [0]*5
 
     def DiesReset(self):
-        self.dies = [randint(1,6) for i in range(5)]
+
+        #五个色子如果点数各不一样则需要重摇
+        while True:
+            dies = [randint(1,6) for _ in range(5)]
+            if len(set(dies)) != 5:
+                break
+        self.dies = dies
+
 
     def ChooseToChallenge(self):
         #TODO: 将此过程转换为LLM生成

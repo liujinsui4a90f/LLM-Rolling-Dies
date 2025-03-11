@@ -10,7 +10,8 @@ game.py - 摇色子游戏模拟器
 最后更新：2025-03-09
 """
 
-from random import randint
+import json
+from random import randint, shuffle
 from player import Player
 from record import *
 
@@ -40,9 +41,9 @@ class Game:
             - 叫“斋”时，所叫的数量不得少于n；
             - 叫“飞”时，所叫数量不得少于n+1。
     """
-    def __init__(self, names : list[str]):
-        self.players = [Player(name) for name in names]
-        self.playerNum = len(names)
+    def __init__(self, config : list[dict[str,str]]):
+        self.players = [Player(c['name'], c['model']) for c in config]
+        self.playerNum = len(config)
         self.round = 0
 
         #记录一局游戏
@@ -50,10 +51,10 @@ class Game:
         self.game_recorder.names = [p.name for p in self.players]
 
         # 当前行动玩家编号
-        self.ActionPlayerNo = randint(0, self.playerNum - 1) 
+        self.ActionPlayerNo = 0
 
         # 最近一次喝酒玩家
-        self.lastDrinker = 0 # range: [0,self.playerNum - 1]
+        self.lastDrinker = None
 
         # 最近一次玩家叫数
         self.call = {
@@ -63,10 +64,22 @@ class Game:
         }
 
     def _ResetGame(self):
-        # 当前行动玩家编号
-        self.ActionPlayerNo = self.lastDrinker % self.playerNum 
+        """有玩家喝酒后，重置游戏"""
+        #随机打乱玩家座次
+        shuffle(self.players)
+
+        # 设置当前行动玩家编号
+        if self.lastDrinker == None:
+            self.ActionPlayerNo = randint(0, self.playerNum - 1)
+        else:
+            try:
+                self.ActionPlayerNo = self.players.index(self.lastDrinker)
+            except ValueError:
+                self.ActionPlayerNo = randint(0, self.playerNum - 1)
+
+        #每一个玩家重新摇色子
         for p in self.players:
-            p.dies = [randint(1,6) for i in range(5)]
+            p.DiesReset()
 
         # 将上一次行动重置为初始状态
         self.call = {
@@ -94,21 +107,31 @@ class Game:
         while len(self.players) > 1:
             print(f"第{self.round + 1}局")
             self._ResetGame()
-            roundRecorder = RoundRecorder(self.players.copy(), self.round, list(), None, None)  
+            roundRecorder = RoundRecorder(alivePlayers=[{'name' : p.name, 'dies' : p.dies, 'cups' : p.cups} for p in self.players],
+                                          roundNum=self.round,
+                                          PlayerEvents=list())  
             
             #无人质疑时，只更新玩家叫数
-            challenge = False
             while True:
-                
-                if self.call['num'] != 0 and self.call['point'] != 0:
+                #第一次叫数的玩家不会被质疑，                
+                if self.call['num'] != 0 and self.call['point'] != 0: 
+                    # 如果不是第一次叫数，才能让玩家决定是否质疑
                     challenge = self.players[self.ActionPlayerNo].ChooseToChallenge()
-                if challenge:
-                    print(f"玩家“{self.players[self.ActionPlayerNo].name}”对上家提出质疑")
-                    break
+                    if not challenge:
+                        # 即使玩家不选择质疑，也记录这次质疑事件
+                        roundRecorder.PlayerEvents.append(ChallengeRecorder(
+                            actor=self.players[self.ActionPlayerNo],
+                            impugant=self.players[(self.ActionPlayerNo - 1) % self.playerNum].name,
+                            decision=False,
+                            suc=None, drinker=None))
+                    else:
+                        print(f"玩家“{self.players[self.ActionPlayerNo].name}”对上家提出质疑")
+                        break
+                # 执行玩家叫数逻辑
                 self.call = self.players[self.ActionPlayerNo].GerenateCall(self.call, self.playerNum)
 
                 # 记录这次叫数事件
-                roundRecorder.callEvents.append(CallRecorder(
+                roundRecorder.PlayerEvents.append(CallRecorder(
                     self.players[self.ActionPlayerNo].name,
                     self.call['num'],
                     self.call['point'],
@@ -117,24 +140,25 @@ class Game:
                 print(f"玩家“{self.players[self.ActionPlayerNo].name}”叫数{self.call['num']}个{self.call['point']}{"斋" if self.call['state'] else "飞"}")
                 self.ActionPlayerNo = (self.ActionPlayerNo + 1) % self.playerNum
             
-            # 当有人质疑时，处理质疑逻辑
+            # 当有人质疑时，处理质疑
             challengeInfo = self._isSuccessfulChallenge()
             if challengeInfo['suc']:
                 print(f"玩家“{self.players[self.ActionPlayerNo].name}”质疑成功，上家喝酒")
                 self.players[(self.ActionPlayerNo - 1) % self.playerNum].cups -= 1
-                self.lastDrinker = (self.ActionPlayerNo - 1) % self.playerNum
+                self.lastDrinker = self.players[(self.ActionPlayerNo - 1) % self.playerNum]
             else:
                 print(f"玩家“{self.players[self.ActionPlayerNo].name}”质疑失败，自己喝酒")
                 self.players[self.ActionPlayerNo].cups -= 1
-                self.lastDrinker = self.ActionPlayerNo
+                self.lastDrinker = self.players[self.ActionPlayerNo]
 
             # 记录这次质疑事件
-            roundRecorder.challengeEvent = ChallengeRecorder(
-                self.players[self.ActionPlayerNo].name,
-                self.players[(self.ActionPlayerNo - 1) % self.playerNum].name,
-                challengeInfo['suc'],
-                self.players[(self.ActionPlayerNo - 1) % self.playerNum].name if challengeInfo['suc'] else self.players[self.ActionPlayerNo].name
-            )
+            roundRecorder.PlayerEvents.append(ChallengeRecorder(
+                actor=self.players[self.ActionPlayerNo].name,
+                impugant=self.players[(self.ActionPlayerNo - 1) % self.playerNum].name,
+                decision=True,
+                suc = challengeInfo['suc'],
+                drinker=self.players[(self.ActionPlayerNo - 1) % self.playerNum].name if challengeInfo['suc'] else self.players[self.ActionPlayerNo].name
+            ))
 
             # 将已经“醉倒”的玩家排除出游戏
             for i in range(self.playerNum):
@@ -151,9 +175,13 @@ class Game:
 
         
         print(f"玩家{self.players[0].name}获得了本局游戏最终的胜利！")
-        print(self.game_recorder.to_dict())
+        print(json.dumps(self.game_recorder.to_dict(), indent=4, ensure_ascii=False))
 
 if __name__ == "__main__":
-    names = ['A','B','C']
-    game = Game(names)
+    configs = [
+        {'name' : 'A', 'model' : 'Model A'},
+        {'name' : 'B', 'model' : 'Model B'},
+        {'name' : 'C', 'model' : 'Model C'}
+    ]
+    game = Game(configs)
     game.start_game()
