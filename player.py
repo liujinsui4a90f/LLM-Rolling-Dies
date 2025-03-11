@@ -37,9 +37,26 @@ class Player:
             for p in Players if p != self.name
         }
     
-    def generate_opinion(self):
+    def generate_opinion(self, Players : list[str], roundInfo):
         """每轮游戏过后更新对其他玩家的看法"""
-        raise NotImplemented
+        
+        for player in self.opinions.keys():
+            if player == self.name:
+                continue
+            with open("./prompt/impression_prompt", 'r', encoding='UTF-8') as c:
+                impression_prompt = c.read()
+            impression_prompt = impression_prompt.format(rule=self.rule,
+                                         round_info=roundInfo,
+                                         player=player,
+                                         previous_opinion=self.opinions[player])
+            for i in range(5):
+                try:
+                    self.opinions[player] = self.client.ask(impression_prompt)
+                except Exception as e:
+                    print(e)
+                    print(f"第{i}次尝试失败，即将进行下一次尝试")
+                    
+
 
     def ChooseToChallenge(self, roundInfo) -> dict:
         with open("./prompt/challenge_prompt", 'r', encoding='UTF-8') as c:

@@ -125,17 +125,20 @@ class Game:
                     if not challengeStruct['choice']:
                         # 即使玩家不选择质疑，也记录这次质疑事件
                         roundRecorder.PlayerEvents.append(ChallengeRecorder(
-                            actor=self.players[self.ActionPlayerNo],
+                            actor=self.players[self.ActionPlayerNo].name,
                             impugant=self.players[(self.ActionPlayerNo - 1) % self.playerNum].name,
                             decision=False,
                             reason=challengeStruct['reason'],
                             action=challengeStruct['action'],
                             suc=None, drinker=None
                             ))
+                        print(f"玩家“{self.players[self.ActionPlayerNo].name}”没有对上家提出质疑")
                         print(challengeStruct['reason'])
                         print(challengeStruct['action'])
                     else:
                         print(f"玩家“{self.players[self.ActionPlayerNo].name}”对上家提出质疑")
+                        print(challengeStruct['reason'])
+                        print(challengeStruct['action'])
                         break
                 # 执行玩家叫数逻辑
                 callStruct = self.players[self.ActionPlayerNo].GerenateCall(last_call=self.call,
@@ -191,14 +194,16 @@ class Game:
             self.game_recorder.rounds.append(roundRecorder)
             if roundRecorder.loser != None:
                 self.game_recorder.losers.append(loser.name)
+            
+            # 让每一位在场的玩家总结对其他玩家的印象
+            for p in self.players:
+                p.generate_opinion(Players=[p.name for p in self.players],
+                                   roundInfo=roundRecorder.round_history(p.name))
 
         
         print(f"玩家{self.players[0].name}获得了本局游戏最终的胜利！")
-        wholeRecord = json.dumps(self.game_recorder.to_dict(), indent=4, ensure_ascii=False)
-        print(wholeRecord)
-        datestrap = str(datetime.now())
-        with open(f'/record/{datestrap}.json', '+wb') as f:
-            f.write(wholeRecord)
+        self.game_recorder.save()
+
 
 
 if __name__ == "__main__":

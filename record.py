@@ -83,12 +83,38 @@ class RoundRecorder:
         for event in self.PlayerEvents:
             if hasattr(event, "impugant"):
                 if event.decision:
-                    info.append(f"{"玩家"+event.actor if event.actor != currentPlayer else '你'}选择质疑{'玩家'+event.impugant if event.impugant != currentPlayer else '你'}")
+                    info.append(f"{"玩家"+event.actor if event.actor != currentPlayer else '你'}选择质疑{'玩家'+event.impugant if event.impugant != currentPlayer else '你'}，")
                 else:
-                    info.append(f"{"玩家"+event.actor if event.actor != currentPlayer else '你'}选择不质疑{'玩家'+event.impugant if event.impugant != currentPlayer else '你'}")
-            else:
-                info.append(f"{'玩家'+event.actor if event.actor != currentPlayer else '你'}叫数{event.num}个{event.point}{'斋' if event.state else '飞'}")
+                    info.append(f"{"玩家"+event.actor if event.actor != currentPlayer else '你'}选择不质疑{'玩家'+event.impugant if event.impugant != currentPlayer else '你'}，")
                 info.append(f'此时{'他' if event.actor != currentPlayer else '你'}' + event.action)
+            else:
+                info.append(f"{'玩家'+event.actor if event.actor != currentPlayer else '你'}叫数{event.num}个{event.point}{'斋' if event.state else '飞'}，")
+                info.append(f'此时{'他' if event.actor != currentPlayer else '你'}' + event.action)
+
+        return '\n'.join(info)
+    
+    def round_history(self, currentPlayer : str) -> str:
+        info = [f'本轮游戏中，场上共有{len(self.alivePlayers)}名玩家。']
+
+        info.append('以下是这轮游戏中其他玩家的过往行为：')
+        for event in self.PlayerEvents:
+            if hasattr(event, "impugant"):
+                if event.decision:
+                    info.append(f"{"玩家"+event.actor if event.actor != currentPlayer else '你'}选择质疑{'玩家'+event.impugant if event.impugant != currentPlayer else '你'}，")
+                    info.append(f'此时{'他' if event.actor != currentPlayer else '你'}' + event.action)
+                    info.append(f"{"玩家"+event.actor if event.actor != currentPlayer else '你'}质疑{"成功" if event.suc else '失败'}，{event.impugant if event.suc else event.actor}喝了一杯酒")
+                else:
+                    info.append(f"{"玩家"+event.actor if event.actor != currentPlayer else '你'}选择不质疑{'玩家'+event.impugant if event.impugant != currentPlayer else '你'}，")
+                    info.append(f'此时{'他' if event.actor != currentPlayer else '你'}' + event.action)
+            else:
+                info.append(f"{'玩家'+event.actor if event.actor != currentPlayer else '你'}叫数{event.num}个{event.point}{'斋' if event.state else '飞'}，")
+                info.append(f'此时{'他' if event.actor != currentPlayer else '你'}' + event.action)
+
+        if self.loser == None:
+            info.append('本局游戏中没有人醉倒')
+        else:
+            info.append(f'玩家{self.loser.name}在本局游戏中醉倒了。')
+
 
         return '\n'.join(info)
 
@@ -121,11 +147,11 @@ if __name__ == '__main__':
                       PlayerEvents=list(),
                       loser=None)
     r.PlayerEvents.append(CallRecorder('A', 5,3,False,'','冷静地摇动色盅，微微皱眉，似乎在思考，然后坚定地说出‘4个5斋’'))
-    r.PlayerEvents.append(ChallengeRecorder('B', 'A', False))
+    r.PlayerEvents.append(ChallengeRecorder('B', 'A', False,"","轻轻点头，目光在Alen和Cendy之间游移，似乎在思考，但没有立即做出反应，保持沉默。"))
     r.PlayerEvents.append(CallRecorder('B', 6,3,False,'','冷静地摇动色盅，微微皱眉，似乎在思考，然后坚定地说出‘4个5斋’'))
-    r.PlayerEvents.append(ChallengeRecorder('C', 'B', False))
+    r.PlayerEvents.append(ChallengeRecorder('C', 'B', False,'','轻轻点头，目光在Alen和Cendy之间游移，似乎在思考，但没有立即做出反应，保持沉默。'))
     r.PlayerEvents.append(CallRecorder('C', 8,5,False,'','冷静地摇动色盅，微微皱眉，似乎在思考，然后坚定地说出‘4个5斋’'))
-    r.PlayerEvents.append(ChallengeRecorder('A', 'C', True, True, 'C'))
+    r.PlayerEvents.append(ChallengeRecorder('A', 'C', True, '', '高声大喊：开！',True, 'C'))
     print(r)
-    print(r.round_info('A'))
+    print(r.round_history('A'))
 
