@@ -16,9 +16,6 @@ from llmClient import LLMClient
 def isValidAction(last_action : dict[int, int, bool], action : dict[int, int, bool], playerNum) -> tuple[bool, str]:
         # 当游戏中第一个玩家叫数时
         if last_action["num"] == 0 and last_action['point'] == 0:
-            # 叫1的时候不能叫飞
-            if action['point'] == 1 and action['state'] == False:
-                return False, "你刚刚叫的数不符合规则，因为叫1的时候不能叫飞"
             # 1点必须n-1个起叫
             if action['num'] < playerNum - 1 and action['point'] == 1:
                 return False, "你刚刚叫的数不符合规则，因为开局叫1点时，所叫点数必须大于等于场上玩家数减一"
@@ -28,6 +25,10 @@ def isValidAction(last_action : dict[int, int, bool], action : dict[int, int, bo
             # 飞必须n+1起叫
             if action['num'] < playerNum + 1 and action['state'] == False:
                 return False, "你刚刚叫的数不符合规则，因为开局叫飞时，所叫点数必须大于等于场上玩家数加一"
+        
+        # 叫1的时候不能叫飞
+        elif action['point'] == 1 and action['state'] == False:
+            return False, "你刚刚叫的数不符合规则，因为叫1的时候不能叫飞"
                     
         # 飞换斋时, 所叫色子数量最多比上家数量少一个
         elif action['state'] and not last_action['state']:
@@ -55,7 +56,7 @@ class Player:
         self.client = LLMClient(model)
 
         #游戏基本数据
-        self.cups = 1
+        self.cups = 3
         self.dies = [0]*5
 
         self.opinions = {}

@@ -56,11 +56,13 @@ class RoundRecorder:
     roundNum : int
     PlayerEvents : list[ActionRecorder]
     loser : Player | None = None
+    opinions : list[dict] | None = None
 
     def to_dict(self) -> dict:
         return {
             'round No.' : self.roundNum,
             'alivePlayers' : [p for p in self.alivePlayers],
+            'opinions' : self.opinions,
             'Events' : [e.to_dict() for e in self.PlayerEvents],
             'loser' : None if self.loser == None else self.loser.name
         }
@@ -124,18 +126,20 @@ class GameRecorder:
     names : list[str]
     losers : list[str]
     rounds : list[RoundRecorder]
+    winner : str | None = None
 
     def to_dict(self) -> dict:
         return {
             'names' : self.names,
+            'rounds' : [r.to_dict() for r in self.rounds],
             'losers' : self.losers,
-            'rounds' : [r.to_dict() for r in self.rounds]
+            'winner' : self.winner
         }
     def save(self):
         d = self.to_dict()
-        j = json.dumps(d)
+        j = json.dumps(d, indent=4, ensure_ascii=False)
         datestrap = datetime.now().strftime("%Y%m%d_%H%M%S")
-        with open(f'./record/{datestrap}.json', 'w', encoding='UTF-8') as f:
+        with open(f'./record/{datestrap}.json', 'x', encoding='UTF-8') as f:
             f.write(j)
 
 
@@ -145,13 +149,15 @@ if __name__ == '__main__':
                                     {'name' : 'C', 'dies' : [3,4,5,5,1], 'cups' : 3}],
                       roundNum=1,
                       PlayerEvents=list(),
-                      loser=None)
+                      loser=None,
+                      opinions={})
     r.PlayerEvents.append(CallRecorder('A', 5,3,False,'','冷静地摇动色盅，微微皱眉，似乎在思考，然后坚定地说出‘4个5斋’'))
     r.PlayerEvents.append(ChallengeRecorder('B', 'A', False,"","轻轻点头，目光在Alen和Cendy之间游移，似乎在思考，但没有立即做出反应，保持沉默。"))
     r.PlayerEvents.append(CallRecorder('B', 6,3,False,'','冷静地摇动色盅，微微皱眉，似乎在思考，然后坚定地说出‘4个5斋’'))
     r.PlayerEvents.append(ChallengeRecorder('C', 'B', False,'','轻轻点头，目光在Alen和Cendy之间游移，似乎在思考，但没有立即做出反应，保持沉默。'))
     r.PlayerEvents.append(CallRecorder('C', 8,5,False,'','冷静地摇动色盅，微微皱眉，似乎在思考，然后坚定地说出‘4个5斋’'))
     r.PlayerEvents.append(ChallengeRecorder('A', 'C', True, '', '高声大喊：开！',True, 'C'))
-    print(r)
-    print(r.round_history('A'))
+    
+    g = GameRecorder(['A', 'B', 'C'], ['A', 'B'],[r])
+    g.save()
 

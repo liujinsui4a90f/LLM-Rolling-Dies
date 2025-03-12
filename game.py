@@ -10,7 +10,7 @@ game.py - 摇色子游戏模拟器
 最后更新：2025-03-11
 """
 
-from datetime import datetime
+from copy import deepcopy
 from random import randint, shuffle
 from player import Player
 from record import *
@@ -21,7 +21,7 @@ class Game:
 
     - **参与人数**：2人以上。
     - **道具**：每人5个色子，一个色盅。
-    - **获胜/失败条件**： 每个玩家有5杯酒，若5杯酒全部喝完就会“醉倒”，则游戏失败；最后一个喝完酒的玩家将会获得胜利
+    - **获胜/失败条件**： 每个玩家有3杯酒，若3杯酒全部喝完就会“醉倒”，则游戏失败；最后一个喝完酒的玩家将会获得胜利
     - **规则**：
         1. 每人摇动色盅，看自己的点数并保密。
         2. 玩家依次叫数，猜测全场某种点数的总和（如“3个3”）。
@@ -69,7 +69,7 @@ class Game:
             p.opinion_init(nameList)
 
     def _ResetGame(self):
-        """有玩家喝酒后，重置游戏"""
+        """游戏开始或有玩家喝酒后，重置游戏"""
         #随机打乱玩家座次
         shuffle(self.players)
 
@@ -94,6 +94,8 @@ class Game:
         }
 
         self.round += 1
+        for p in self.players:
+            print(f"玩家{p.name}，本轮的色子是：{p.dies}，他还有{p.cups}杯酒")
 
     def _isSuccessfulChallenge(self) -> dict[bool, int]:
         """处理质疑逻辑"""
@@ -113,11 +115,13 @@ class Game:
             self._ResetGame()
             roundRecorder = RoundRecorder(alivePlayers=[{'name' : p.name, 'dies' : p.dies, 'cups' : p.cups} for p in self.players],
                                           roundNum=self.round,
-                                          PlayerEvents=list())  
+                                          PlayerEvents=list(),
+                                          opinions=[{p.name : deepcopy(p.opinions)} for p in self.players]
+                                          )  
             
-            #无人质疑时，只更新玩家叫数
+            # 无人质疑时，只更新玩家叫数
             while True:
-                #第一次叫数的玩家不会被质疑，                
+                # 第一次叫数的玩家不会被质疑，                
                 if self.call['num'] != 0 and self.call['point'] != 0: 
                     # 如果不是第一次叫数，才能让玩家决定是否质疑
                     challengeStruct = self.players[self.ActionPlayerNo].GenerateChallenge(roundRecorder.round_info(self.players[self.ActionPlayerNo].name))
@@ -188,8 +192,10 @@ class Game:
                     self.playerNum -= 1
                     # 记录失败者
                     roundRecorder.loser = loser
+                    print(f"{loser.name}在本局游戏中喝醉了。")
                     break
-
+            
+            # 将本轮信息汇总到game_record中
             self.game_recorder.rounds.append(roundRecorder)
             if roundRecorder.loser != None:
                 self.game_recorder.losers.append(loser.name)
@@ -198,18 +204,15 @@ class Game:
             for p in self.players:
                 p.generate_opinion(Players=[p.name for p in self.players],
                                    roundInfo=roundRecorder.round_history(p.name))
+                
+                # 将每个玩家对其他玩家的看法打印出来
+                for otherPlayer in p.opinions.keys():
+                    if not otherPlayer in [x.name for x in self.players]:
+                        continue
+                    print(f"{p.name}对{otherPlayer}的看法：",p.opinions[otherPlayer])
 
-        
         print(f"玩家{self.players[0].name}获得了本局游戏最终的胜利！")
+        self.game_recorder.winner = self.players[0].name
         self.game_recorder.save()
 
 
-
-if __name__ == "__main__":
-    configs = [
-        {'name' : 'Alen', 'model' : 'deepseek-chat'},
-        {'name' : 'Bob', 'model' : 'deepseek-chat'},
-        {'name' : 'Cendy', 'model' : 'deepseek-chat'}
-    ]
-    game = Game(configs)
-    game.start_game()
