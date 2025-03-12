@@ -135,7 +135,7 @@ class GameRecorder:
         d = self.to_dict()
         j = json.dumps(d)
         datestrap = datetime.now().strftime("%Y%m%d_%H%M%S")
-        with open(f'/record/{datestrap}.json', 'w', encoding='UTF-8') as f:
+        with open(f'./record/{datestrap}.json', 'w', encoding='UTF-8') as f:
             f.write(j)
 
 

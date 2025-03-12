@@ -1,7 +1,51 @@
+"""
+player.py - 摇色子游戏模拟器的玩家类
+
+该文件实现了一个多人摇色子游戏的玩家的模拟。
+主要类：
+- Player：玩家类，执行游戏逻辑以及与大模型交互
+
+作者：Jinsui
+版本：1.0
+最后更新：2025-03-11
+"""
 import json
 from random import randint
-from utils import isValidAction
 from llmClient import LLMClient
+
+def isValidAction(last_action : dict[int, int, bool], action : dict[int, int, bool], playerNum) -> tuple[bool, str]:
+        # 当游戏中第一个玩家叫数时
+        if last_action["num"] == 0 and last_action['point'] == 0:
+            # 叫1的时候不能叫飞
+            if action['point'] == 1 and action['state'] == False:
+                return False, "你刚刚叫的数不符合规则，因为叫1的时候不能叫飞"
+            # 1点必须n-1个起叫
+            if action['num'] < playerNum - 1 and action['point'] == 1:
+                return False, "你刚刚叫的数不符合规则，因为开局叫1点时，所叫点数必须大于等于场上玩家数减一"
+            # 斋必须n个起叫
+            if action['num'] < playerNum and action['state'] == True:
+                return False, "你刚刚叫的数不符合规则，因为开局叫斋时，所叫点数必须大于等于场上玩家数"
+            # 飞必须n+1起叫
+            if action['num'] < playerNum + 1 and action['state'] == False:
+                return False, "你刚刚叫的数不符合规则，因为开局叫飞时，所叫点数必须大于等于场上玩家数加一"
+                    
+        # 飞换斋时, 所叫色子数量最多比上家数量少一个
+        elif action['state'] and not last_action['state']:
+            if action['num'] < last_action['num'] - 1:
+                return False, "你刚刚叫的数不符合规则，因为飞换斋时, 所叫色子数量最多比上家数量少一个"
+        
+        # 斋换飞时，需将所叫数量较上家所含数量翻倍
+        elif not action['state'] and last_action['state']:
+            if action['num'] < last_action['num'] * 2:
+                return False, "你刚刚叫的数不符合规则，因为斋换飞时，需将所叫数量较上家所叫数量翻倍"
+
+        # 一般情况下
+        else:
+            # 玩家所叫点数和个数须至少一个大于上家所叫
+            if action['num'] < last_action['num'] and action['point'] < last_action['point']:
+                return False, "你刚刚叫的数不符合规则，因为玩家所叫点数和个数须至少一个大于上家所叫"
+        
+        return True, ''
 
 
 class Player:
@@ -41,7 +85,12 @@ class Player:
         """每轮游戏过后更新对其他玩家的看法"""
         
         for player in self.opinions.keys():
+            # 跳过自己
             if player == self.name:
+                continue
+
+            # 跳过已经淘汰的玩家
+            if not player in Players:
                 continue
             with open("./prompt/impression_prompt", 'r', encoding='UTF-8') as c:
                 impression_prompt = c.read()
@@ -52,13 +101,14 @@ class Player:
             for i in range(5):
                 try:
                     self.opinions[player] = self.client.ask(impression_prompt)
+                    break
                 except Exception as e:
                     print(e)
                     print(f"第{i}次尝试失败，即将进行下一次尝试")
                     
 
 
-    def ChooseToChallenge(self, roundInfo) -> dict:
+    def GenerateChallenge(self, roundInfo) -> dict:
         with open("./prompt/challenge_prompt", 'r', encoding='UTF-8') as c:
             challenge_prompt = c.read()
             challenge_prompt = challenge_prompt.format(rule=self.rule,
@@ -78,7 +128,7 @@ class Player:
                 return response
             except Exception as e:
                 print(e)
-                print(f"第{i}次尝试，叫数生成失败或不符合规则")
+                print(f"第{i+1}次尝试，质疑生成失败或不符合规则")
         print("有人砸场子，这破酒不喝也罢！")
         raise Exception("有玩家连续五次没有生成正确的行动，游戏结束")
 
@@ -91,8 +141,14 @@ class Player:
                                          dies=self.dies,
                                          understanding=json.dumps(self.opinions, ensure_ascii=False),
                                          cups=self.cups)
+        instrution = None
         for i in range(5):
             try:
+                # 如上次叫数失败或不符合规则
+                if i > 0 and instrution != None:
+                    call_prompt = call_prompt + f'\n你刚刚叫了{call['num']}个{call['point']}{'斋' if call['state'] else '飞'}\n'
+                    call_prompt = call_prompt + instrution
+                    call_prompt = call_prompt + '\n请重新叫数'
                 # 向llm发起询问
                 response = self.client.ask(call_prompt)
                 # 提取json
@@ -110,7 +166,8 @@ class Player:
                 }
 
                 #判断该行动是否符合规则
-                if not isValidAction(last_call, call, playerNum):
+                vaildcall, instrution = isValidAction(last_call, call, playerNum)
+                if not vaildcall:
                     raise ValueError("The call doesn't match rules, please retry.")
                 
                 output = {'call' : call,
@@ -120,7 +177,7 @@ class Player:
             
             except Exception as e:
                 print(f"ERROR: {e}")
-                print(f"第{i}次尝试，叫数生成失败或不符合规则")
+                print(f"第{i+1}次尝试，叫数生成失败或不符合规则")
             
             
         print("有人砸场子，这破酒不喝也罢！")

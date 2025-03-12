@@ -7,10 +7,9 @@ game.py - 摇色子游戏模拟器
 
 作者：Jinsui
 版本：1.0
-最后更新：2025-03-09
+最后更新：2025-03-11
 """
 
-import json
 from datetime import datetime
 from random import randint, shuffle
 from player import Player
@@ -121,7 +120,7 @@ class Game:
                 #第一次叫数的玩家不会被质疑，                
                 if self.call['num'] != 0 and self.call['point'] != 0: 
                     # 如果不是第一次叫数，才能让玩家决定是否质疑
-                    challengeStruct = self.players[self.ActionPlayerNo].ChooseToChallenge(roundRecorder.round_info(self.players[self.ActionPlayerNo].name))
+                    challengeStruct = self.players[self.ActionPlayerNo].GenerateChallenge(roundRecorder.round_info(self.players[self.ActionPlayerNo].name))
                     if not challengeStruct['choice']:
                         # 即使玩家不选择质疑，也记录这次质疑事件
                         roundRecorder.PlayerEvents.append(ChallengeRecorder(
@@ -132,13 +131,13 @@ class Game:
                             action=challengeStruct['action'],
                             suc=None, drinker=None
                             ))
+                        print(f'{self.players[self.ActionPlayerNo].name} start thinking',challengeStruct['reason'],f'{self.players[self.ActionPlayerNo].name} end thinking')
+                        print(f'玩家{self.players[self.ActionPlayerNo].name}' + challengeStruct['action'])
                         print(f"玩家“{self.players[self.ActionPlayerNo].name}”没有对上家提出质疑")
-                        print(challengeStruct['reason'])
-                        print(challengeStruct['action'])
                     else:
+                        print(f'{self.players[self.ActionPlayerNo].name} start thinking',challengeStruct['reason'],f'{self.players[self.ActionPlayerNo].name} end thinking')
+                        print(f'{self.players[self.ActionPlayerNo].name}' + challengeStruct['action'])
                         print(f"玩家“{self.players[self.ActionPlayerNo].name}”对上家提出质疑")
-                        print(challengeStruct['reason'])
-                        print(challengeStruct['action'])
                         break
                 # 执行玩家叫数逻辑
                 callStruct = self.players[self.ActionPlayerNo].GerenateCall(last_call=self.call,
@@ -146,8 +145,8 @@ class Game:
                                                                            roundInfo=roundRecorder.round_info(self.players[self.ActionPlayerNo].name)
                                                                            )
                 self.call = callStruct['call']
-                print(callStruct['reason'])
-                print(callStruct['action'])
+                print(f'{self.players[self.ActionPlayerNo].name} start thinking',callStruct['reason'],f'{self.players[self.ActionPlayerNo].name} end thinking')
+                print(f'玩家{self.players[self.ActionPlayerNo].name}' + callStruct['action'])
                 # 记录这次叫数事件
                 roundRecorder.PlayerEvents.append(CallRecorder(
                     self.players[self.ActionPlayerNo].name,
