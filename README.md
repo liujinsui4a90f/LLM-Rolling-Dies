@@ -18,6 +18,11 @@ pip install openai
 ```sh
 python main.py
 ```
+执行
+```python
+python main.py -n x
+```
+以运行多局游戏，`x`为局数。
 
 ## 已知问题
 当LLM的叫数不符合规则时，会在prompt中加入上次叫数违反的具体规则，并重新生成叫数，者在一定程度上会干扰AI的判断。用户可以选择优化prompt来增强AI的推理能力 (也有可能会削弱)。

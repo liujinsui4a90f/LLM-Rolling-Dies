@@ -137,11 +137,11 @@ class Game:
                             ))
                         print(f'{self.players[self.ActionPlayerNo].name} start thinking',challengeStruct['reason'],f'{self.players[self.ActionPlayerNo].name} end thinking')
                         print(f'玩家{self.players[self.ActionPlayerNo].name}' + challengeStruct['action'])
-                        print(f"玩家“{self.players[self.ActionPlayerNo].name}”没有对上家提出质疑")
+                        print(f"玩家“{self.players[self.ActionPlayerNo].name}”没有对上家提出质疑\n")
                     else:
                         print(f'{self.players[self.ActionPlayerNo].name} start thinking',challengeStruct['reason'],f'{self.players[self.ActionPlayerNo].name} end thinking')
                         print(f'{self.players[self.ActionPlayerNo].name}' + challengeStruct['action'])
-                        print(f"玩家“{self.players[self.ActionPlayerNo].name}”对上家提出质疑")
+                        print(f"玩家“{self.players[self.ActionPlayerNo].name}”对上家提出质疑\n")
                         break
                 # 执行玩家叫数逻辑
                 callStruct = self.players[self.ActionPlayerNo].GerenateCall(last_call=self.call,
@@ -160,17 +160,17 @@ class Game:
                     callStruct['reason'],
                     callStruct['action']
                     ))
-                print(f"玩家“{self.players[self.ActionPlayerNo].name}”叫数{self.call['num']}个{self.call['point']}{"斋" if self.call['state'] else "飞"}")
+                print(f"玩家“{self.players[self.ActionPlayerNo].name}”叫数{self.call['num']}个{self.call['point']}{"斋" if self.call['state'] else "飞"}\n")
                 self.ActionPlayerNo = (self.ActionPlayerNo + 1) % self.playerNum
             
             # 当有人质疑时，处理质疑
             challengeInfo = self._isSuccessfulChallenge()
             if challengeInfo['suc']:
-                print(f"玩家“{self.players[self.ActionPlayerNo].name}”质疑成功，上家喝酒")
+                print(f"玩家“{self.players[self.ActionPlayerNo].name}”质疑成功，上家喝酒\n")
                 self.players[(self.ActionPlayerNo - 1) % self.playerNum].cups -= 1
                 self.lastDrinker = self.players[(self.ActionPlayerNo - 1) % self.playerNum]
             else:
-                print(f"玩家“{self.players[self.ActionPlayerNo].name}”质疑失败，自己喝酒")
+                print(f"玩家“{self.players[self.ActionPlayerNo].name}”质疑失败，自己喝酒\n")
                 self.players[self.ActionPlayerNo].cups -= 1
                 self.lastDrinker = self.players[self.ActionPlayerNo]
 
