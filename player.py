@@ -159,10 +159,12 @@ class Player:
         
         """
         match_rule = r'[0-9]*个[0-9][斋|飞]'
-        result = re.search(match_rule, text)
-        if result:
-            result = result.group()
         call = {'num' : None, 'point' : None, 'state' : None}
+        result = re.search(match_rule, text)
+        if result != None:
+            result = result.group()
+        else:
+            return call
         call['state'] = True if result[-1] == '斋' else False
         call['point'] = int(result[-2])
         call['num'] = int(result[:-3])
@@ -213,6 +215,9 @@ class Player:
                 if call != call_in_action:
                     instruction = "action中的叫数与结构体中的\"num\",\"point\",\"state\"不一致,请重试"
                     raise Exception("action中的叫数与结构体中的\"num\",\"point\",\"state\"不一致")
+                elif call_in_action['num'] == None:
+                    instruction = "请务必将你的叫数在json结构体的\"action\"中明确体现，以使其他玩家你的确切的了解你的行动"
+                    raise Exception("叫数未置于`action`键中")
 
                 #判断该行动是否符合规则
                 vaildcall, instruction = isValidAction(last_call, call, playerNum)

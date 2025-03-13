@@ -18,7 +18,7 @@ if __name__ == "__main__":
 
     configs = [
         {'name' : 'Qwen',     'model' : 'qwen-plus-latest'},
-        {'name' : 'DeepSeek', 'model' : 'deepseek-v3-baiduyun'},
+        {'name' : 'DeepSeek', 'model' : 'deepseek-v3-aliyun'},
         {'name' : 'Doubao',   'model' : 'Doubao-1.5-pro-32k'},
         {'name' : 'GLM',      'model' : 'GLM-4-Air'}
     ]
