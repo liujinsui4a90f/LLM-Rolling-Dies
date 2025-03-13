@@ -10,6 +10,7 @@ player.py - 摇色子游戏模拟器的玩家类
 最后更新：2025-03-11
 """
 import json
+import re
 from random import randint
 from llmClient import LLMClient
 
@@ -64,7 +65,7 @@ class Player:
         # 读取游戏规则，用于后续生成prompt
         with open("./prompt/rule", 'r', encoding='UTF-8') as r:
             self.rule = r.read()
-        self.rule = self.rule.format(name='Player C')
+        self.rule = self.rule.format(name=self.name)
 
     def DiesReset(self):
 
@@ -123,8 +124,17 @@ class Player:
                 # 向llm发起询问
                 response = self.client.ask(challenge_prompt)
                 # 提取json
-                response = response[7:-3]
-                response = json.loads(response)
+                response = re.search(r'({[\s\S]*})', response)
+                if response:
+                    response = response.group()
+                    response = json.loads(response)
+
+                    # 如果没获得指定的键
+                    if not all(key in response for key in ['choice','reason','action']):
+                        raise Exception("质疑生成失败")
+                else:
+                    # 如果没有匹配到json结构
+                    raise Exception("质疑生成失败")
 
                 return response
             except Exception as e:
@@ -132,6 +142,31 @@ class Player:
                 print(f"第{i+1}次尝试，质疑生成失败或不符合规则")
         print("有人砸场子，这破酒不喝也罢！")
         raise Exception("有玩家连续五次没有生成正确的行动，游戏结束")
+    
+    def text2call(self, text : str) -> dict:
+        """
+        从文本中提取call结构体
+
+        @INPUT
+        - text : str 一段对玩家行动的描述
+
+        @OUTPUT
+        call : dict 一个字典，包含`num`,`point`,`state`三个键
+
+        例：
+        input: "轻轻敲击桌面，目光坚定地扫过其他玩家，语气平稳但略带自信地说道：‘6个4斋。’随后微微挑眉，等待下家的反应。"
+        output: {'num' : 6, 'point' : 4, 'state' : True}
+        
+        """
+        match_rule = r'[0-9]*个[0-9][斋|飞]'
+        result = re.search(match_rule, text)
+        if result:
+            result = result.group()
+        call = {'num' : None, 'point' : None, 'state' : None}
+        call['state'] = True if result[-1] == '斋' else False
+        call['point'] = int(result[-2])
+        call['num'] = int(result[:-3])
+        return call
 
     def GerenateCall(self, last_call : dict, playerNum : int, roundInfo : str):
 
@@ -142,19 +177,28 @@ class Player:
                                          dies=self.dies,
                                          understanding=json.dumps(self.opinions, ensure_ascii=False),
                                          cups=self.cups)
-        instrution = None
+        instruction = None
         for i in range(5):
             try:
                 # 如上次叫数失败或不符合规则
-                if i > 0 and instrution != None:
+                if i > 0 and instruction != None:
                     call_prompt = call_prompt + f'\n你刚刚叫了{call['num']}个{call['point']}{'斋' if call['state'] else '飞'}\n'
-                    call_prompt = call_prompt + instrution
+                    call_prompt = call_prompt + instruction
                     call_prompt = call_prompt + '\n请重新叫数'
                 # 向llm发起询问
                 response = self.client.ask(call_prompt)
                 # 提取json
-                response = response[7:-3]
-                response = json.loads(response)
+                response = re.search(r'({[\s\S]*})', response)
+                if response:
+                    response = response.group()
+                    response = json.loads(response)
+
+                    # 如果没获得指定的键
+                    if not all(key in response for key in ['num','point','state','reason','action']):
+                        raise Exception("叫数生成失败")
+                else:
+                    # 如果没有匹配到json结构
+                    raise Exception("叫数生成失败")
 
                 if response['point'] < 1 or response['point'] > 6:
                     raise ValueError("Point out of Boundary (1-6)")
@@ -165,9 +209,13 @@ class Player:
                     'point' : response['point'],
                     'state' : response['state']
                 }
+                call_in_action = self.text2call(response['action'])
+                if call != call_in_action:
+                    instruction = "action中的叫数与结构体中的\"num\",\"point\",\"state\"不一致,请重试"
+                    raise Exception("action中的叫数与结构体中的\"num\",\"point\",\"state\"不一致")
 
                 #判断该行动是否符合规则
-                vaildcall, instrution = isValidAction(last_call, call, playerNum)
+                vaildcall, instruction = isValidAction(last_call, call, playerNum)
                 if not vaildcall:
                     raise ValueError("The call doesn't match rules, please retry.")
                 

@@ -14,11 +14,9 @@ class LLMClient:
         self.client = OpenAI(api_key=APIKEY, base_url='https://api.mindcraft.com.cn/v1')
 
     def ask(self, prompt : str) -> str:
-        response = self.client.chat.completions.create(model='deepseek-chat',
+        response = self.client.chat.completions.create(model=self.model,
                                             messages=[
                                                 {'role' : 'user', 'content' : prompt}
                                             ])
-        if response.status != 200:
-            raise RuntimeError(f"Didn't get response from {self.model}.")
         return response.choices[0].message.content
         

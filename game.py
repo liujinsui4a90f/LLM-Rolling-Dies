@@ -96,6 +96,7 @@ class Game:
         self.round += 1
         for p in self.players:
             print(f"玩家{p.name}，本轮的色子是：{p.dies}，他还有{p.cups}杯酒")
+        print()
 
     def _isSuccessfulChallenge(self) -> dict[bool, int]:
         """处理质疑逻辑"""
@@ -210,6 +211,7 @@ class Game:
                     if not otherPlayer in [x.name for x in self.players]:
                         continue
                     print(f"{p.name}对{otherPlayer}的看法：",p.opinions[otherPlayer])
+                print()
 
         print(f"玩家{self.players[0].name}获得了本局游戏最终的胜利！")
         self.game_recorder.winner = self.players[0].name
