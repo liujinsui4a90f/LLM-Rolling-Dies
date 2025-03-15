@@ -32,6 +32,13 @@ python record_convert.py
 ```
 以将游戏记录由json格式转换为易读的文本格式。
 
+### 游戏统计
+执行
+```python
+python analyse.py
+```
+以统计游戏结果。`analyse.py`在被执行时，会自动读取`./record`目录下的所有json文件，并进行统计。
+
 
 ## 已知问题
 - 当LLM的叫数不符合规则时，会在prompt中加入上次叫数违反的具体规则，并重新生成叫数，会在一定程度上会干扰AI的判断。用户可以选择优化prompt来增强AI的推理能力 (也有可能会削弱)。
